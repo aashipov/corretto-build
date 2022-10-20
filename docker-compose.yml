@@ -1,0 +1,23 @@
+version: '3.8'
+
+# DISTRO=alpine JAVA_VERSION=8 docker-compose -f docker-compose.yml run --rm jdk
+# DISTRO=centos JAVA_VERSION=8 docker-compose -f docker-compose.yml run --rm jdk
+# DISTRO=centos JAVA_VERSION=11 docker-compose -f docker-compose.yml run --rm jdk
+# DISTRO=centos JAVA_VERSION=17 docker-compose -f docker-compose.yml run --rm jdk
+
+services:
+  jdk:
+    image: ${DOCKER_HUB_USER_AND_REPOSITORY}:${DISTRO}${JDK}${JAVA_VERSION}u
+    hostname: ${CORRETTO}-${JAVA_VERSION}
+    container_name: ${CORRETTO}-${JAVA_VERSION}
+    user: ${DUMMY_UID}:${DUMMY_UID}
+    working_dir: /${DUMMY_USER}/
+    command: /${DUMMY_USER}/${COMPOSE_PROJECT_NAME}/entrypoint${JAVA_VERSION}.bash ${JAVA_VERSION}
+    env_file:
+      - .env
+    volumes:
+      - ${HOME}/${CORRETTO}-${JAVA_VERSION}/:/${DUMMY_USER}/${CORRETTO}-${JAVA_VERSION}/:rw
+      - ${HOME}/${JTREG}/:/${DUMMY_USER}/${JTREG}/:rw
+      - ${HOME}/${GTEST}/:/${DUMMY_USER}/${GTEST}/:rw
+      - ./:/${DUMMY_USER}/${COMPOSE_PROJECT_NAME}:ro
+      - ${HOME}/.github_token:/${DUMMY_USER}/.github_token:ro

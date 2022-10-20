@@ -1,113 +1,170 @@
 #!/bin/bash
 
-set -ex
+set -e
 
-JAVA_VERSION=${1}
-JDK="jdk"
-JRE="jre"
-JTREG="jtreg"
-GTEST="googletest"
-JDK_FLAVOR="corretto-${JAVA_VERSION}"
-JRE_FLAVOR="corretto-${JAVA_VERSION}-${JRE}"
-INSTRUCTION_SET="x86_64"
-GIT_CLONE_URL=https://github.com/corretto/${JDK_FLAVOR}.git
+environment() {
+    _SCRIPT_DIR=$(dirname -- "$(readlink -f -- "$0")")
+    cd ${_SCRIPT_DIR}
 
-OS_TYPE="linux"
-TOP_DIR=${HOME}
-# https://github.com/archlinux/svntogit-packages/blob/packages/java11-openjdk/trunk/PKGBUILD
-# Avoid optimization of HotSpot being lowered from O3 to O2
-_CFLAGS="-O3 -pipe"
-if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
-    OS_TYPE="windows"
-    TOP_DIR="/cygdrive/c"
-    export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
-    _CFLAGS="/O2"
-fi
-JDK_DIR="${TOP_DIR}/${JDK_FLAVOR}"
-JTREG_DIR="${TOP_DIR}/${JTREG}"
-GTEST_DIR="${TOP_DIR}/${GTEST}"
-OS_TYPE_AND_INSTRUCTION_SET="${OS_TYPE}-${INSTRUCTION_SET}"
+    JAVA_VERSION=${1}
+    JDK="jdk"
+    JRE="jre"
+    JTREG="jtreg"
+    GTEST="googletest"
+    JDK_FLAVOR="${JDK}${JAVA_VERSION}u"
+    JRE_FLAVOR="${JRE}${JAVA_VERSION}u"
+    INSTRUCTION_SET="x86_64"
+    CORRETTO=corretto
 
-ALPINE=""
-if [ -f /etc/alpine-release ]; then
-    ALPINE="-alpine"
-fi
-
-if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
-    source /opt/rh/devtoolset-7/enable
-#  source /opt/rh/llvm-toolset-7/enable
-fi
-
-# if [[ "${JAVA_VERSION}" = "11" ]]; then
-#     if [ ! -d "${JTREG_DIR}/.git" ]; then
-#         cd ${TOP_DIR}
-#         git clone https://github.com/openjdk/${JTREG}.git
-#         cd ${JTREG_DIR}
-#     else
-#         cd ${JTREG_DIR}
-#         git pull
-#     fi
-#     bash make/build.sh --jdk ${JAVA_HOME}
-# fi
-# if [[ "${JAVA_VERSION}" = "17" ]]; then
-#     if [ ! -d "${GTEST_DIR}/.git" ]; then
-#         cd ${TOP_DIR}
-#         git clone https://github.com/google/googletest
-#         cd ${GTEST_DIR}
-#     else
-#         cd ${GTEST_DIR}
-#         git checkout main
-#         git pull -r
-#     fi
-#     git checkout tags/release-1.8.1
-# fi
-
-DEFAULT_BRANCH=develop
-if [ ! -d "${JDK_DIR}/.git" ]; then
-    cd ${TOP_DIR}
-    git clone ${GIT_CLONE_URL}
-    cd ${JDK_DIR}
-else
-    cd ${JDK_DIR}
-    git checkout ${DEFAULT_BRANCH}
-    git pull
-fi
-
-# https://gist.github.com/rponte/fdc0724dd984088606b0 or commit sha
-TOP_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-if [[ "${JAVA_VERSION}" == "11" ]]; then
-    TOP_TAG="11.0.16.9.1"
-elif [[ "${JAVA_VERSION}" == "17" ]]; then
-    TOP_TAG="17.0.4.9.1"
-else
-    printf "Version 11 or 17 only\n"
-    exit 1
-fi
-git checkout tags/${TOP_TAG}
-
-CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-freetype=bundled --with-version-pre=\"\" --with-version-opt=\"\" --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-unlimited-crypto --disable-warnings-as-errors --with-version-string=\"${TOP_TAG#${JDK}-}\""
-#CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
-#CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-jtreg=${JTREG_DIR}/build/images/jtreg"
-#CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-gtest=${GTEST_DIR}"
-bash -c "bash configure ${CONFIGURE_DETAILS}"
-
-make clean
-STARTTIME=$(date +%s)
-make images legacy-jre-image docs
-ENDTIME=$(date +%s)
-echo "Compilation took $((${ENDTIME} - ${STARTTIME})) seconds"
-
-if [[ $? -eq 0 ]]; then
-    if [[ "${JAVA_VERSION}" == "11" ]]; then
-        cd ${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-normal-server-release/images/
-    elif [[ "${JAVA_VERSION}" == "17" ]]; then
-        cd ${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-server-release/images/
+    TAG_TO_BUILD=$(cat ${_SCRIPT_DIR}/.tag_to_build_${JAVA_VERSION})
+    if [[ "${TAG_TO_BUILD}" == "" ]]; then
+        printf "Can not find ${_SCRIPT_DIR}/.tag_to_build_${JAVA_VERSION} file or it is empty\n"
+        exit 1
     fi
-    find "${PWD}" -type f -name '*.debuginfo' -exec rm {} \;
-    find "${PWD}" -type f -name '*.diz' -exec rm {} \;
-    GZIP=-9 tar -czhf ./${JDK_FLAVOR}-${OS_TYPE_AND_INSTRUCTION_SET}-${TOP_TAG}${ALPINE}.tar.gz jdk/
-    GZIP=-9 tar -czhf ./${JRE_FLAVOR}-${OS_TYPE_AND_INSTRUCTION_SET}-${TOP_TAG}${ALPINE}.tar.gz jre/
-fi
 
-#cd ${JDK_DIR}
-#make run-test-tier1
+    local OS_TYPE="linux"
+    TOP_DIR=${HOME}
+    # https://github.com/archlinux/svntogit-packages/blob/packages/java11-openjdk/trunk/PKGBUILD
+    # Avoid optimization of HotSpot being lowered from O3 to O2
+    _CFLAGS="-O3 -pipe"
+    if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
+        if [[ "${OSTYPE}" == "cygwin" ]]; then
+            TOP_DIR="/cygdrive/c"
+        elif [[ "${OSTYPE}" == "msys" ]]; then
+            TOP_DIR="/c"
+        fi
+        OS_TYPE="windows"
+        export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
+        _CFLAGS="/O2"
+    fi
+    JDK_DIR="${TOP_DIR}/${CORRETTO}-${JAVA_VERSION}"
+    JTREG_DIR="${TOP_DIR}/${JTREG}"
+    GTEST_DIR="${TOP_DIR}/${GTEST}"
+    OS_TYPE_AND_INSTRUCTION_SET="${OS_TYPE}-${INSTRUCTION_SET}"
+
+    ALPINE=""
+    if [ -f /etc/alpine-release ]; then
+        ALPINE="-alpine"
+    elif [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
+        source /opt/rh/devtoolset-10/enable
+    #    source /opt/rh/llvm-toolset-7/enable
+    fi
+
+    if [[ "${JAVA_VERSION}" = "11" ]]; then
+        RELEASE_IMAGE_DIR=${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-normal-server-release/images/
+        # if [ ! -d "${JTREG_DIR}/.git" ]; then
+        #     cd ${TOP_DIR}
+        #     git clone https://github.com/openjdk/${JTREG}.git
+        #     cd ${JTREG_DIR}
+        # else
+        #     cd ${JTREG_DIR}
+        #     git pull -r
+        # fi
+        # bash make/build.sh --jdk ${JAVA_HOME}
+    elif [[ "${JAVA_VERSION}" = "17" ]]; then
+        RELEASE_IMAGE_DIR=${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-server-release/images/
+        # if [ ! -d "${GTEST_DIR}/.git" ]; then
+        #     cd ${TOP_DIR}
+        #     git clone https://github.com/google/googletest
+        #     cd ${GTEST_DIR}
+        # else
+        #     cd ${GTEST_DIR}
+        #     git checkout main
+        #     git pull -r
+        # fi
+        # git checkout tags/release-1.8.1
+    else
+        printf "Version 11 or 17 only\n"
+        exit 1
+    fi
+}
+
+checkout() {
+    DEFAULT_BRANCH=develop
+    if [ ! -d "${JDK_DIR}/.git" ]; then
+        cd ${TOP_DIR}
+        git clone https://github.com/${CORRETTO}/${CORRETTO}-${JAVA_VERSION}.git
+        cd ${JDK_DIR}
+    else
+        cd ${JDK_DIR}
+        git checkout ${DEFAULT_BRANCH}
+        git pull
+    fi
+
+    if [ $(git tag -l "${TAG_TO_BUILD}") ]; then
+        git checkout tags/${TAG_TO_BUILD}
+    else
+        printf "Can not find tag ${TAG_TO_BUILD}\n"
+        exit 1
+    fi
+}
+
+build() {
+    VERSION_BUILD=$(printf ${TAG_TO_BUILD} | cut -d '.' -f 4)
+
+    CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-freetype=bundled --with-version-pre=\"\" --with-version-opt=\"\" --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-unlimited-crypto --disable-warnings-as-errors --with-version-build=\"${VERSION_BUILD}\" --with-version-pre= --with-vendor-version-string=Corretto-O3-\"${TAG_TO_BUILD}\""
+    if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
+        CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-version=2017"
+    else
+        #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
+        echo
+    fi
+    #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-jtreg=${JTREG_DIR}/build/images/jtreg"
+    #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-gtest=${GTEST_DIR}"
+    bash -c "bash configure ${CONFIGURE_DETAILS}"
+
+    make clean
+    STARTTIME=$(date +%s)
+    make images legacy-jre-image docs
+    ENDTIME=$(date +%s)
+    echo "Compilation took $((${ENDTIME} - ${STARTTIME})) seconds"
+}
+
+publish() {
+    if [[ $? -eq 0 ]]; then
+        cd ${RELEASE_IMAGE_DIR}
+        local DOT_TAR_DOT_GZ=".tar.gz"
+        local JDK_FILE_NAME=${JDK_FLAVOR}-${OS_TYPE_AND_INSTRUCTION_SET}-${TAG_TO_BUILD}${ALPINE}${DOT_TAR_DOT_GZ}
+        local JRE_FILE_NAME=${JRE_FLAVOR}-${OS_TYPE_AND_INSTRUCTION_SET}-${TAG_TO_BUILD}${ALPINE}${DOT_TAR_DOT_GZ}
+        find "${PWD}" -type f -name '*.debuginfo' -exec rm {} \;
+        find "${PWD}" -type f -name '*.diz' -exec rm {} \;
+        GZIP=-9 tar -czhf ${JDK_FILE_NAME} jdk/
+        GZIP=-9 tar -czhf ${JRE_FILE_NAME} jre/
+
+        local GITHUB_TOKEN=$(cat ${HOME}/.github_token)
+        if [[ "${GITHUB_TOKEN}" != "" ]]; then
+            local GITHUB_OWNER=aashipov
+            local GITHUB_REPO=corretto-build
+            local GITHUB_RELEASE_ID=80394672
+
+            local FILES_TO_UPLOAD=(${JDK_FILE_NAME} ${JRE_FILE_NAME})
+            for file_to_upload in "${FILES_TO_UPLOAD[@]}"; do
+                #https://stackoverflow.com/a/7506695
+                FILE_NAME_URL_ENCODED=$(printf "${file_to_upload}" | hexdump -v -e '/1 "%02x"' | sed 's/\(..\)/%\1/g')
+                curl \
+                    https://uploads.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/${GITHUB_RELEASE_ID}/assets?name=${FILE_NAME_URL_ENCODED} \
+                    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                    -H "Content-type: application/gzip" \
+                    --data-binary @${RELEASE_IMAGE_DIR}/${file_to_upload}
+            done
+        fi
+    fi
+}
+
+do_test() {
+    if [[ $? -eq 0 ]]; then
+        cd ${JDK_DIR}
+        make run-test-tier1
+    fi
+}
+
+closure() {
+    environment ${1}
+    checkout
+    build
+    #do_test
+    publish
+}
+
+# Main procedure
+closure ${1}
