@@ -34,7 +34,7 @@ if [ -f /etc/alpine-release ]; then
 fi
 
 if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-10/enable
 #  source /opt/rh/llvm-toolset-7/enable
 fi
 
@@ -76,17 +76,23 @@ fi
 # https://gist.github.com/rponte/fdc0724dd984088606b0 or commit sha
 TOP_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
 if [[ "${JAVA_VERSION}" == "11" ]]; then
-    TOP_TAG="11.0.16.9.1"
+    TOP_TAG="11.0.17.8.1"
 elif [[ "${JAVA_VERSION}" == "17" ]]; then
-    TOP_TAG="17.0.4.9.1"
+    TOP_TAG="17.0.5.8.1"
 else
     printf "Version 11 or 17 only\n"
     exit 1
 fi
 git checkout tags/${TOP_TAG}
+VERSION_BUILD=$(printf ${TOP_TAG} | cut -d '.' -f 4)
 
-CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-freetype=bundled --with-version-pre=\"\" --with-version-opt=\"\" --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-unlimited-crypto --disable-warnings-as-errors --with-version-string=\"${TOP_TAG#${JDK}-}\""
-#CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
+CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-freetype=bundled --with-version-pre=\"\" --with-version-opt=\"\" --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-unlimited-crypto --disable-warnings-as-errors --with-version-build=\"${VERSION_BUILD}\" --with-version-pre= --with-vendor-version-string=Corretto-O3-\"${TOP_TAG}\""
+if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
+    CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-version=2017"
+else
+    #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
+    echo
+fi
 #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-jtreg=${JTREG_DIR}/build/images/jtreg"
 #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-gtest=${GTEST_DIR}"
 bash -c "bash configure ${CONFIGURE_DETAILS}"

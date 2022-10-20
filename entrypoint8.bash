@@ -42,7 +42,7 @@ if [ -f /etc/alpine-release ]; then
 fi
 
 if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
-  source /opt/rh/devtoolset-7/enable
+  source /opt/rh/devtoolset-10/enable
 #  source /opt/rh/llvm-toolset-7/enable
 fi
 
@@ -59,23 +59,21 @@ fi
 
 # https://gist.github.com/rponte/fdc0724dd984088606b0 or commit sha
 TOP_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-TOP_TAG="release-8.352.08.1"
+TOP_TAG="8.352.08.1"
 git checkout tags/${TOP_TAG}
-git pull -r
 
-MINOR_VER=$(printf ${TOP_TAG} | cut -d'-' -f 1)
-MINOR_VER=${MINOR_VER#${JDK_FLAVOR}}
+MINOR_VER=$(printf ${TOP_TAG} | cut -d '.' -f 2)
+UPDATE_VER=$(printf ${TOP_TAG} | cut -d '.' -f 3)
+CORRETTO_REVISION=$(printf ${TOP_TAG} | cut -d '.' -f 4)
 
-UPDATE_VER=$(printf ${TOP_TAG} | cut -d'-' -f 2)
-UPDATE_VER=${UPDATE_VER#"b"}
-
-CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-milestone=\"fcs\" --enable-unlimited-crypto --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-jfr=yes --with-update-version=\"${MINOR_VER}\" --with-build-number=\"${UPDATE_VER}\""
+CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-milestone=\"fcs\" --enable-unlimited-crypto --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-jfr=yes --with-update-version=\"${MINOR_VER}\" --with-build-number=\"${UPDATE_VER}\" --with-corretto-revision=\"${CORRETTO_REVISION}\""
 if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
-  CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-freetype-src=${FREETYPE_SRC_DIR}"
+  CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-freetype-src=${FREETYPE_SRC_DIR} --with-toolchain-version=2017"
 else
   CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --disable-freetype-bundling"
   #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
 fi
+#CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-jtreg=${JTREG_DIR}/build/images/jtreg"
 bash -c "bash configure ${CONFIGURE_DETAILS}"
 
 make clean
@@ -83,12 +81,6 @@ make all
 
 if [[ $? -eq 0 ]]; then
   cd ${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-normal-server-release/images/
-  RELEASE_FILE=j2sdk-image/release
-  touch ${RELEASE_FILE}
-  printf "$(git rev-parse --verify HEAD)\n${TOP_TAG}\n" >> ${RELEASE_FILE}
-  RELEASE_FILE=j2re-image/release
-  touch ${RELEASE_FILE}
-  printf "$(git rev-parse --verify HEAD)\n${TOP_TAG}\n" >> ${RELEASE_FILE}
   find "${PWD}" -type f -name '*.debuginfo' -exec rm {} \;
   find "${PWD}" -type f -name '*.diz' -exec rm {} \;
   GZIP=-9 tar -czhf ./${JDK_FLAVOR}-${OS_TYPE_AND_INSTRUCTION_SET}-${TOP_TAG}${ALPINE}.tar.gz j2sdk-image/
