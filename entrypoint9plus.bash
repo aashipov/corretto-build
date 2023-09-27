@@ -61,7 +61,7 @@ environment() {
         #     git pull -r
         # fi
         # bash make/build.sh --jdk ${JAVA_HOME}
-    elif [[ "${JAVA_VERSION}" = "17" ]]; then
+    elif [[ "${JAVA_VERSION}" = "17" ]] || [[ "${JAVA_VERSION}" = "21" ]]; then
         RELEASE_IMAGE_DIR=${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-server-release/images/
         # if [ ! -d "${GTEST_DIR}/.git" ]; then
         #     cd ${TOP_DIR}
@@ -74,7 +74,7 @@ environment() {
         # fi
         # git checkout tags/release-1.8.1
     else
-        printf "Version 11 or 17 only\n"
+        printf "Version 11, 17 or 21 only\n"
         exit 1
     fi
 }

@@ -4,6 +4,7 @@ version: '3.8'
 # DISTRO=centos JAVA_VERSION=8 docker-compose -f docker-compose.yml run --rm jdk
 # DISTRO=centos JAVA_VERSION=11 docker-compose -f docker-compose.yml run --rm jdk
 # DISTRO=centos JAVA_VERSION=17 docker-compose -f docker-compose.yml run --rm jdk
+# DISTRO=centos JAVA_VERSION=21 docker-compose -f docker-compose.yml run --rm jdk
 
 services:
   jdk:
