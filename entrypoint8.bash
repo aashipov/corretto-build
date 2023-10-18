@@ -34,7 +34,7 @@ environment() {
       TOP_DIR="/c"
     fi
     OS_TYPE="windows"
-    export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
+    export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk1.${JAVA_VERSION}
     _CFLAGS="/O2"
     local FREETYPE=freetype
     local FREETYPE_AND_VERSION=${FREETYPE}-2.5.3
