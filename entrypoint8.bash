@@ -57,8 +57,10 @@ environment() {
   if [ -f /etc/alpine-release ]; then
     ALPINE="-alpine"
   elif [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
-    source /opt/rh/devtoolset-10/enable
-  #  source /opt/rh/llvm-toolset-7/enable
+    if [ ! -f /etc/fedora-release ]; then
+      source /opt/rh/devtoolset-10/enable
+    #    source /opt/rh/llvm-toolset-7/enable
+    fi
   fi
 }
 
