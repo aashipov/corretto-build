@@ -5,6 +5,7 @@ version: '3.8'
 # DISTRO=centos JAVA_VERSION=11 docker-compose -f docker-compose.yml run --rm jdk
 # DISTRO=centos JAVA_VERSION=17 docker-compose -f docker-compose.yml run --rm jdk
 # DISTRO=centos JAVA_VERSION=21 docker-compose -f docker-compose.yml run --rm jdk
+# DISTRO=centos JAVA_VERSION=25 docker-compose -f docker-compose.yml run --rm jdk
 
 services:
   jdk:
@@ -13,7 +14,7 @@ services:
     container_name: ${CORRETTO}-${JAVA_VERSION}
     user: ${DUMMY_UID}:${DUMMY_UID}
     working_dir: /${DUMMY_USER}/
-    command: /${DUMMY_USER}/${COMPOSE_PROJECT_NAME}/entrypoint${JAVA_VERSION}.bash ${JAVA_VERSION}
+    command: /${DUMMY_USER}/${COMPOSE_PROJECT_NAME}/entrypoint${JAVA_VERSION}.sh ${JAVA_VERSION}
     env_file:
       - .env
     volumes:

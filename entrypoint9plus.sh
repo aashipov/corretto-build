@@ -17,7 +17,8 @@ environment() {
     CORRETTO=corretto
 
     TAG_TO_BUILD=$(cat ${_SCRIPT_DIR}/.tag_to_build_${JAVA_VERSION})
-    if [[ "${TAG_TO_BUILD}" == "" ]]; then
+    if [ "${TAG_TO_BUILD}" == "" ]
+    then
         printf "Can not find ${_SCRIPT_DIR}/.tag_to_build_${JAVA_VERSION} file or it is empty\n"
         exit 1
     fi
@@ -26,13 +27,9 @@ environment() {
     TOP_DIR=${HOME}
     # https://github.com/archlinux/svntogit-packages/blob/packages/java11-openjdk/trunk/PKGBUILD
     # Avoid optimization of HotSpot being lowered from O3 to O2
-    _CFLAGS="-O3 -pipe"
-    if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
-        if [[ "${OSTYPE}" == "cygwin" ]]; then
-            TOP_DIR="/cygdrive/c"
-        elif [[ "${OSTYPE}" == "msys" ]]; then
-            TOP_DIR="/c"
-        fi
+    _CFLAGS="-O3 -pipe -Wno-error"
+    if [ "${OSTYPE}" == "cygwin" ]
+    then
         OS_TYPE="windows"
         export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
         _CFLAGS="/O2"
@@ -43,16 +40,20 @@ environment() {
     OS_TYPE_AND_INSTRUCTION_SET="${OS_TYPE}-${INSTRUCTION_SET}"
 
     ALPINE=""
-    if [ -f /etc/alpine-release ]; then
+    if [ -f /etc/alpine-release ]
+    then
         ALPINE="-alpine"
-    elif [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
-        if [ ! -f /etc/fedora-release ]; then
+    elif [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]
+    then
+        if [ ! -f /etc/fedora-release ]
+        then
             source /opt/rh/devtoolset-10/enable
         #    source /opt/rh/llvm-toolset-7/enable
         fi
     fi
 
-    if [[ "${JAVA_VERSION}" = "11" ]]; then
+    if [ "${JAVA_VERSION}" = "11" ]
+    then
         RELEASE_IMAGE_DIR=${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-normal-server-release/images/
         # if [ ! -d "${JTREG_DIR}/.git" ]; then
         #     cd ${TOP_DIR}
@@ -63,7 +64,8 @@ environment() {
         #     git pull -r
         # fi
         # bash make/build.sh --jdk ${JAVA_HOME}
-    elif [[ "${JAVA_VERSION}" = "17" ]] || [[ "${JAVA_VERSION}" = "21" ]]; then
+    elif [ "${JAVA_VERSION}" = "17" ] || [ "${JAVA_VERSION}" = "21" ]
+    then
         RELEASE_IMAGE_DIR=${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-server-release/images/
         # if [ ! -d "${GTEST_DIR}/.git" ]; then
         #     cd ${TOP_DIR}
@@ -83,7 +85,8 @@ environment() {
 
 checkout() {
     DEFAULT_BRANCH=develop
-    if [ ! -d "${JDK_DIR}/.git" ]; then
+    if [ ! -d "${JDK_DIR}/.git" ]
+    then
         cd ${TOP_DIR}
         git clone https://github.com/${CORRETTO}/${CORRETTO}-${JAVA_VERSION}.git
         cd ${JDK_DIR}
@@ -93,7 +96,8 @@ checkout() {
         git pull
     fi
 
-    if [ $(git tag -l "${TAG_TO_BUILD}") ]; then
+    if [ $(git tag -l "${TAG_TO_BUILD}") ]
+    then
         git checkout tags/${TAG_TO_BUILD}
     else
         printf "Can not find tag ${TAG_TO_BUILD}\n"
@@ -123,7 +127,8 @@ build() {
 }
 
 publish() {
-    if [[ $? -eq 0 ]]; then
+    if [ ${?} -eq 0 ]
+    then
         cd ${RELEASE_IMAGE_DIR}
         local DOT_TAR_DOT_GZ=".tar.gz"
         local JDK_FILE_NAME=${JDK_FLAVOR}-${OS_TYPE_AND_INSTRUCTION_SET}-${TAG_TO_BUILD}${ALPINE}${DOT_TAR_DOT_GZ}
@@ -139,8 +144,8 @@ publish() {
             local GITHUB_REPO=corretto-build
             local GITHUB_RELEASE_ID=80394672
 
-            local FILES_TO_UPLOAD=(${JDK_FILE_NAME} ${JRE_FILE_NAME})
-            for file_to_upload in "${FILES_TO_UPLOAD[@]}"; do
+            local FILES_TO_UPLOAD="${JDK_FILE_NAME} ${JRE_FILE_NAME}"
+            for file_to_upload in ${FILES_TO_UPLOAD}; do
                 #https://stackoverflow.com/a/7506695
                 FILE_NAME_URL_ENCODED=$(printf "${file_to_upload}" | hexdump -v -e '/1 "%02x"' | sed 's/\(..\)/%\1/g')
                 curl \
@@ -154,7 +159,8 @@ publish() {
 }
 
 do_test() {
-    if [[ $? -eq 0 ]]; then
+    if [ ${?} -eq 0 ]
+    then
         cd ${JDK_DIR}
         make run-test-tier1
     fi

@@ -1,1 +1,0 @@
-entrypoint9plus.bash
