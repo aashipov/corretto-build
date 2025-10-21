@@ -28,24 +28,29 @@ environment() {
   # https://raw.githubusercontent.com/archlinux/svntogit-packages/packages/java8-openjdk/trunk/PKGBUILD
   # Avoid optimization of HotSpot being lowered from O3 to O2
   _CFLAGS="-O3 -pipe -Wno-error"
-  if [ "${OSTYPE}" == "cygwin" ]
+  if [ "${OSTYPE}" = "cygwin" ]
   then
-    OS_TYPE="windows"
-    export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk1.${JAVA_VERSION}
-    _CFLAGS="/O2"
-    local FREETYPE=freetype
-    local FREETYPE_AND_VERSION=${FREETYPE}-2.5.3
-    FREETYPE_SRC_DIR=${TOP_DIR}/dev/VCS/${FREETYPE_AND_VERSION}
-    if [ ! -d "${FREETYPE_SRC_DIR}" ]
-    then
-      FREETYPE_TAR_GZ=${FREETYPE_AND_VERSION}.tar.gz
-      FREETYPE_TAR_GZ_IN_TMP=/tmp/${FREETYPE_TAR_GZ}
-      rm -rf ${FREETYPE_SRC_DIR}
-      mkdir -p ${FREETYPE_SRC_DIR}
-      curl -L https://download-mirror.savannah.gnu.org/releases/${FREETYPE}/${FREETYPE}-old/${FREETYPE_TAR_GZ} -o ${FREETYPE_TAR_GZ_IN_TMP}
-      tar -xzf ${FREETYPE_TAR_GZ_IN_TMP} -C ${FREETYPE_SRC_DIR} --strip-components=1
-      rm -rf ${FREETYPE_TAR_GZ_IN_TMP}
-    fi
+      TOP_DIR="/cygdrive/c"
+      OS_TYPE="windows"
+      _CFLAGS="/O2"
+      local FREETYPE=freetype
+      local FREETYPE_AND_VERSION=${FREETYPE}-2.5.3
+      FREETYPE_SRC_DIR=${TOP_DIR}/dev/VCS/${FREETYPE_AND_VERSION}
+      if [ ! -d "${FREETYPE_SRC_DIR}" ]
+      then
+          mkdir -p ${TOP_DIR}/temp/
+          local FREETYPE_TAR_GZ=${FREETYPE_AND_VERSION}${DOT_TAR_DOT_GZ}
+          local FREETYPE_TAR_GZ_IN_TEMP=${TOP_DIR}/temp/${FREETYPE}${DOT_TAR_DOT_GZ}
+          rm -rf ${FREETYPE_SRC_DIR}
+          mkdir -p ${FREETYPE_SRC_DIR}
+          curl -L https://download-mirror.savannah.gnu.org/releases/${FREETYPE}/${FREETYPE}-old/${FREETYPE_TAR_GZ} -o ${FREETYPE_TAR_GZ_IN_TEMP}
+          tar -xzf ${FREETYPE_TAR_GZ_IN_TEMP} -C ${FREETYPE_SRC_DIR} --strip-components=1
+          rm -rf ${FREETYPE_TAR_GZ_IN_TEMP}
+      fi
+  fi
+  if [ -z ${JAVA_HOME+x} ] || [ "" = "${JAVA_HOME}" ]
+  then
+      export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
   fi
   JDK_DIR="${TOP_DIR}/${CORRETTO}-${JAVA_VERSION}"
   JTREG_DIR="${TOP_DIR}/${JTREG}"
@@ -99,7 +104,7 @@ build() {
     CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --disable-freetype-bundling"
     #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
   fi
-  bash -c "bash configure ${CONFIGURE_DETAILS}"
+  sh -c "sh configure ${CONFIGURE_DETAILS}"
 
   make clean
   make all

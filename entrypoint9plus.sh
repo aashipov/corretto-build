@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -27,12 +27,16 @@ environment() {
     TOP_DIR=${HOME}
     # https://github.com/archlinux/svntogit-packages/blob/packages/java11-openjdk/trunk/PKGBUILD
     # Avoid optimization of HotSpot being lowered from O3 to O2
-    _CFLAGS="-O3 -pipe -Wno-error"
-    if [ "${OSTYPE}" == "cygwin" ]
+    _CFLAGS="-O3 -pipe"
+    if [ "${OSTYPE}" = "cygwin" ]
     then
+        TOP_DIR="/cygdrive/c"
         OS_TYPE="windows"
-        export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
         _CFLAGS="/O2"
+    fi
+    if [ -z ${JAVA_HOME+x} ] || [ "" = "${JAVA_HOME}" ]
+    then
+        export JAVA_HOME=${TOP_DIR}/dev/tools/openjdk${JAVA_VERSION}
     fi
     JDK_DIR="${TOP_DIR}/${CORRETTO}-${JAVA_VERSION}"
     JTREG_DIR="${TOP_DIR}/${JTREG}"
@@ -63,8 +67,8 @@ environment() {
         #     cd ${JTREG_DIR}
         #     git pull -r
         # fi
-        # bash make/build.sh --jdk ${JAVA_HOME}
-    elif [ "${JAVA_VERSION}" = "17" ] || [ "${JAVA_VERSION}" = "21" ]
+        # sh make/build.sh --jdk ${JAVA_HOME}
+    elif [ "${JAVA_VERSION}" = "17" ] || [ "${JAVA_VERSION}" = "21" ] || [ "${JAVA_VERSION}" = "25" ]
     then
         RELEASE_IMAGE_DIR=${JDK_DIR}/build/${OS_TYPE_AND_INSTRUCTION_SET}-server-release/images/
         # if [ ! -d "${GTEST_DIR}/.git" ]; then
@@ -78,7 +82,7 @@ environment() {
         # fi
         # git checkout tags/release-1.8.1
     else
-        printf "Version 11, 17 or 21 only\n"
+        printf "Version 11, 17, 21 or 25 only\n"
         exit 1
     fi
 }
@@ -109,15 +113,10 @@ build() {
     VERSION_BUILD=$(printf ${TAG_TO_BUILD} | cut -d '.' -f 4)
 
     CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-freetype=bundled --with-version-pre=\"\" --with-version-opt=\"\" --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-unlimited-crypto --disable-warnings-as-errors --with-version-build=\"${VERSION_BUILD}\" --with-version-pre= --with-vendor-version-string=Corretto-O3-\"${TAG_TO_BUILD}\""
-    if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" ]]; then
-        CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-version=2017"
-    else
-        #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
-        echo
-    fi
+    #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
     #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-jtreg=${JTREG_DIR}/build/images/jtreg"
     #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-gtest=${GTEST_DIR}"
-    bash -c "bash configure ${CONFIGURE_DETAILS}"
+    sh -c "sh configure ${CONFIGURE_DETAILS}"
 
     make clean
     STARTTIME=$(date +%s)
