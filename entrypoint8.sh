@@ -101,7 +101,7 @@ build() {
   then
     CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-freetype-src=${FREETYPE_SRC_DIR} --with-toolchain-version=2017"
   else
-    CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --disable-freetype-bundling"
+    echo
     #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
   fi
   sh -c "sh configure ${CONFIGURE_DETAILS}"
