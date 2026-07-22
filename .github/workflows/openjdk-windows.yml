@@ -1,0 +1,80 @@
+name: openjdk-windows
+run-name: "${{ inputs.vendor }} windows ${{ inputs.javaVersion }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      vendor:
+        description: "vendor"
+        required: true
+        default: "corretto"
+        type: choice
+        options:
+          - "openjdk"
+          - "corretto"
+      javaVersion:
+        description: "javaVersion"
+        required: true
+        default: "11"
+        type: choice
+        options:
+          - "8"
+          - "11"
+          - "17"
+          - "21"
+          - "25"
+
+jobs:
+  openjdk-windows:
+    runs-on: windows-2022
+
+    steps:
+      - name: Check if GH_TOKEN is set
+        shell: bash
+        run: |
+          if [ "${{ secrets.GH_TOKEN }}" == '' ]
+          then
+            printf "secrets.GH_TOKEN is not set\n"
+            exit 1
+          fi
+
+      - name: Set java up
+        uses: actions/setup-java@v4
+        id: setup-java
+        with:
+          distribution: "temurin"
+          java-version: ${{ inputs.javaVersion }}
+
+      - name: Set JAVA_HOME up
+        run: echo "JAVA_HOME=$(cygpath "${{ steps.setup-java.outputs.path }}")" | Out-File -FilePath "$env:GITHUB_ENV" -Encoding utf8 -Append
+
+      - name: Check JAVA_HOME
+        shell: bash
+        run: echo ${JAVA_HOME} && echo ${PATH}
+
+      - name: Install Cygwin and packages
+        uses: cygwin/cygwin-install-action@v4
+        with:
+          install-dir: C:\cygwin64
+          packages: bash git autoconf make cmake zip unzip cpio mc curl bsdtar tr
+
+      - name: Persist GH_TOKEN to C:/cygwin64/home/runneradmin/.github_token
+        shell: C:/cygwin64/bin/bash.exe --login -eo pipefail -o igncr '{0}'
+        run: pwd && ls && echo ${{ secrets.GH_TOKEN }} > C:/cygwin64/home/runneradmin/.github_token
+
+      - name: Git configuration
+        shell: C:/cygwin64/bin/bash.exe --login -eo pipefail -o igncr '{0}'
+        run: mkdir -p "$HOME" && git config --system core.autocrlf false && git config --global --add safe.directory '*'
+
+      - name: Check out repository code
+        uses: actions/checkout@v5
+        with:
+          set-safe-directory: "*"
+
+      - name: Clone builder repo
+        shell: C:/cygwin64/bin/bash.exe --login -eo pipefail -o igncr '{0}'
+        run: cd C:/cygwin64/home/runneradmin/ && git clone https://github.com/aashipov/${{ inputs.vendor }}-build.git
+
+      - name: Build
+        shell: C:/cygwin64/bin/bash.exe --login -eo pipefail -o igncr '{0}'
+        run: "ls -lA && cd ${{ inputs.vendor }}-build && cat .tag_to_build_${{ inputs.javaVersion }} && ./entrypoint${{ inputs.javaVersion }}.sh ${{ inputs.javaVersion }}"

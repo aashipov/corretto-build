@@ -33,20 +33,6 @@ environment() {
       TOP_DIR="/cygdrive/c"
       OS_TYPE="windows"
       _CFLAGS="/O2"
-      local FREETYPE=freetype
-      local FREETYPE_AND_VERSION=${FREETYPE}-2.5.3
-      FREETYPE_SRC_DIR=${TOP_DIR}/dev/VCS/${FREETYPE_AND_VERSION}
-      if [ ! -d "${FREETYPE_SRC_DIR}" ]
-      then
-          mkdir -p ${TOP_DIR}/temp/
-          local FREETYPE_TAR_GZ=${FREETYPE_AND_VERSION}${DOT_TAR_DOT_GZ}
-          local FREETYPE_TAR_GZ_IN_TEMP=${TOP_DIR}/temp/${FREETYPE}${DOT_TAR_DOT_GZ}
-          rm -rf ${FREETYPE_SRC_DIR}
-          mkdir -p ${FREETYPE_SRC_DIR}
-          curl -L https://download-mirror.savannah.gnu.org/releases/${FREETYPE}/${FREETYPE}-old/${FREETYPE_TAR_GZ} -o ${FREETYPE_TAR_GZ_IN_TEMP}
-          tar -xzf ${FREETYPE_TAR_GZ_IN_TEMP} -C ${FREETYPE_SRC_DIR} --strip-components=1
-          rm -rf ${FREETYPE_TAR_GZ_IN_TEMP}
-      fi
   fi
   if [ -z ${JAVA_HOME+x} ] || [ "" = "${JAVA_HOME}" ]
   then
@@ -99,7 +85,7 @@ build() {
   CONFIGURE_DETAILS="--verbose --with-debug-level=release --with-native-debug-symbols=none --with-jvm-variants=server --with-milestone=\"fcs\" --enable-unlimited-crypto --with-extra-cflags=\"${_CFLAGS}\" --with-extra-cxxflags=\"${_CFLAGS}\" --with-extra-ldflags=\"${_CFLAGS}\" --enable-jfr=yes --with-update-version=\"${MINOR_VER}\" --with-build-number=\"${UPDATE_VER}\" --with-corretto-revision=\"${CORRETTO_REVISION}\""
   if [ "${OSTYPE}" == "cygwin" ]
   then
-    CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-freetype-src=${FREETYPE_SRC_DIR} --with-toolchain-version=2017"
+    CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-version=2017"
   else
     echo
     #CONFIGURE_DETAILS="${CONFIGURE_DETAILS} --with-toolchain-type=clang"
