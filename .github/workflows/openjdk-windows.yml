@@ -39,14 +39,14 @@ jobs:
           fi
 
       - name: Set java up
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         id: setup-java
         with:
           distribution: "temurin"
           java-version: ${{ inputs.javaVersion }}
 
       - name: Set JAVA_HOME up
-        run: echo "JAVA_HOME=$(cygpath "${{ steps.setup-java.outputs.path }}")" | Out-File -FilePath "$env:GITHUB_ENV" -Encoding utf8 -Append
+        run: echo "JAVA_HOME=/cygdrive$(cygpath "${{ steps.setup-java.outputs.path }}")" | Out-File -FilePath "$env:GITHUB_ENV" -Encoding utf8 -Append
 
       - name: Check JAVA_HOME
         shell: bash
@@ -57,6 +57,13 @@ jobs:
         with:
           install-dir: C:\cygwin64
           packages: bash git autoconf make cmake zip unzip cpio mc curl bsdtar tr
+
+      - name:
+          Install VS 2017 Build Tools
+        if: ${{ github.event.inputs.javaVersion == '8' }}
+        run: |
+          choco install visualstudio2017buildtools --nocache --quiet
+          choco install visualstudio2017-workload-vctools --nocache --quiet
 
       - name: Persist GH_TOKEN to C:/cygwin64/home/runneradmin/.github_token
         shell: C:/cygwin64/bin/bash.exe --login -eo pipefail -o igncr '{0}'
@@ -77,4 +84,4 @@ jobs:
 
       - name: Build
         shell: C:/cygwin64/bin/bash.exe --login -eo pipefail -o igncr '{0}'
-        run: "ls -lA && cd ${{ inputs.vendor }}-build && cat .tag_to_build_${{ inputs.javaVersion }} && ./entrypoint${{ inputs.javaVersion }}.sh ${{ inputs.javaVersion }}"
+        run: "ls -lA && cd ${{ inputs.vendor }}-build && ./entrypoint${{ inputs.javaVersion }}.sh ${{ inputs.javaVersion }}"

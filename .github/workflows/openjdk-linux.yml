@@ -62,4 +62,4 @@ jobs:
         run: sudo chown -R 10001:10001 . ${HOME}/{jdk{7,8,11,17,21,25}u,corretto-{8,11,17,21,25},jtreg,googletest,.github_token,openj9-openjdk-jdk{8,11,17,21,25}}
 
       - name: Build JDK
-        run: ls -lA && cd ${{ inputs.vendor }}-build && cat .tag_to_build_${{ inputs.javaVersion }} && DISTRO=${{ inputs.distro }} JAVA_VERSION=${{ inputs.javaVersion }} DUMMY_UID=10001 DUMMY_GID=10001 docker compose run --rm jdk
+        run: ls -lA && cd ${{ inputs.vendor }}-build && DISTRO=${{ inputs.distro }} JAVA_VERSION=${{ inputs.javaVersion }} DUMMY_UID=10001 DUMMY_GID=10001 docker compose run --rm jdk
