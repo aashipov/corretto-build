@@ -20,7 +20,7 @@ download() {
     if ! curl -fL --retry 3 -o "${TGT_FILE}.part" "${SRC_URL}"
     then
         rm -f "${TGT_FILE}.part"
-        printf 'Failed to download %s' "${SRC_URL}"
+        printf 'Failed to download %s\n' "${SRC_URL}" >&2
         exit 1
     fi
     mv "${TGT_FILE}.part" "${TGT_FILE}"
@@ -30,7 +30,7 @@ closure() {
     set -e
     if [ -z "${1}" ]
     then
-        printf 'Specify java version to download, e.g. corretto-downloader.sh 25\n'
+        printf 'Specify java version to download, e.g. corretto-downloader.sh 25\n' >&2
         exit 1
     fi
 
@@ -61,13 +61,14 @@ closure() {
     fi
 
     SRC_URL="https://github.com/aashipov/corretto-build/releases/latest/download/${PRODUCT_WITH_PLATFORM}-${TAG_TO_BUILD}${ALPINE}.tar.gz"
-    TGT_FILE="${BASE_DIR}/${CORRETTO}${JAVA_VERSION}.tar.gz"
+    TGT_FILE="${BASE_DIR}/${CORRETTO}-$(basename ${SRC_URL})"
     download
 
     TARGET_DIR_NAME="${CORRETTO}${JAVA_VERSION}"
     rm -rf "${BASE_DIR}/${TARGET_DIR_NAME}"
     mkdir -p "${BASE_DIR}/${TARGET_DIR_NAME}"
     tar -xzf "${TGT_FILE}" -C "${BASE_DIR}/${TARGET_DIR_NAME}"  --strip-components=1
+    "${BASE_DIR}/${TARGET_DIR_NAME}/"bin/java -version
 }
 
 closure "${1}"
